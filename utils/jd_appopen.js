@@ -1,115 +1,36 @@
 /*
-环境测试:
-  1. 互助码api访问测试
-  2. 脚本版本检测
-时间: 2021-06-16-
 
-脚本兼容: QuantumultX, Surge, Loon, JSBox, Node.js
-===================quantumultx================
-[task_local]
-#环境测试
-0 12 * * * jd_api_test.js, tag=环境测试, enabled=true
+杀掉后台后打开京东app获取app_open
+在脚本日志查看值
 
-=====================Loon================
+[MITM]
+hostname = api.m.jd.com
+
+===========Surge=================
 [Script]
-cron "0 12 * * *" script-path=jd_api_test.js, tag=环境测试
+jd_appopen = type=http-request,pattern=^https:\/\/api\.m\.jd\.com\/openUpgrade, max-size=0, script-path=jd_appopen.js
 
-====================Surge================
-环境测试 = type=cron,cronexp=0 12 * * *,wake-system=1,timeout=3600,script-path=jd_api_test.js
+===================Quantumult X=====================
+[rewrite_local]
+# jd_appopen
+^https:\/\/api\.m\.jd\.com\/openUpgrade url script-request-header jd_appopen.js
 
-============小火箭=========
-环境测试 = type=cron,script-path=jd_api_test.js, cronexpr="0 12 * * *", timeout=3600, enable=true
+=====================Loon=====================
+[Script]
+http-request ^https:\/\/api\.m\.jd\.com\/openUpgrade script-path=jd_appopen.js, timeout=3600, tag=jd_appopen
+
 */
 
-console.log(`==================脚本执行- 北京时间(UTC+8)：${new Date(new Date().getTime() + new Date().getTimezoneOffset() * 60 * 1000 + 8 * 60 * 60 * 1000).toLocaleString()}=====================\n`)
+const $ = new Env("app_open")
 
-const $ = new Env("环境测试")
+let cookie = $request.headers.Cookie
+let pt_key = cookie.match(/(pt_key=[^;]*)/)[1]
+let pt_pin = cookie.match(/(pt_pin=[^;]*)/)[1]
+console.log('================')
+console.log(`${pt_key};${pt_pin};`)
+console.log('================')
+$.msg("app_open获取成功！", "在运行日志中查看")
 
-$.version = '0.1'
-
-!(async () => {
-  await getRandomCode();
-
-  await version();
-
-})()
-
-function getRandomCode() {
-  return new Promise(resolve => {
-    let cars = ['bean', 'farm', 'health', 'jxfactory', 'pet'];
-    let db = cars[Math.floor(Math.random() * 5)]
-    let num = Math.floor(Math.random() * 20 + 5)
-    console.log(`本次随机选择${db}获取${num}个随机助力码`)
-    $.get({url: `http://api.sharecode.ga/api/${db}/${num}`, timeout: 3000}, (err, resp, data) => {
-      try {
-        if (data) {
-          data = JSON.parse(data)
-          console.log(JSON.stringify(data, null, '  '))
-          if (data.code === 200) {
-            if (data.data.length === num) {
-              console.log(`成功获取${num}个`)
-            }
-          }
-        } else {
-          // $.msg("JDHelloWorld", "获取助力池失败！", `请手动访问http://api.sharecode.ga/api/version`, {"open-url": "http://api.sharecode.ga/api/version"})
-          $.msg("JDHelloWorld", "获取助力池失败！", '请检查网络！')
-          if ($.isNode()) {
-            const notify = require('./sendNotify')
-            notify.sendNotify("JDHelloWorld", `获取助力池失败！请检查网络！`)
-          }
-          $.logErr("获取助力池失败！请检查网络！\n")
-        }
-      } catch (e) {
-        $.msg("JDHelloWorld", "获取助力池失败！", '请检查网络！')
-        if ($.isNode()) {
-            const notify = require('./sendNotify')
-            notify.sendNotify("JDHelloWorld", `获取助力池失败！请检查网络！`)
-          }
-        $.logErr("获取助力池失败！请检查网络！\n")
-      } finally {
-        resolve()
-      }
-    })
-  })
-}
-
-function version() {
-  return new Promise(resolve => {
-    console.log('\n开始版本检测......')
-    $.get({url: `http://api.sharecode.ga/api/version`, timeout: 3000}, (err, resp, data) => {
-      try {
-        if (data) {
-          console.log(`本地：${$.version}\n远程：${data}`)
-          if (data === $.version) {
-            console.log('已是最新版本')
-          } else {
-            $.msg("JDHelloWorld", "请更新！", `本地：${$.version}\n远程：${data}`)
-            if ($.isNode()) {
-              const notify = require('./sendNotify')
-              notify.sendNotify("JDHelloWorld", `本地：${$.version}\n远程：${data}\n\n请及时更新！`)
-            }
-          }
-        } else {
-          $.msg("JDHelloWorld", "版本检测失败", `请手动访问 http://api.sharecode.ga/api/version 测试网络`, {"open-url": "http://api.sharecode.ga/api/version"})
-          if ($.isNode()) {
-            const notify = require('./sendNotify')
-            notify.sendNotify("JDHelloWorld", `版本检测失败\n请手动访问\nhttp://api.sharecode.ga/api/version\n测试网络`)
-          }
-        }
-      } catch (e) {
-        $.msg("JDHelloWorld", "版本检测失败", `请手动访问 http://api.sharecode.ga/api/version 测试网络`, {"open-url": "http://api.sharecode.ga/api/version"})
-        if ($.isNode()) {
-          const notify = require('./sendNotify')
-          notify.sendNotify("JDHelloWorld", `版本检测失败\n请手动访问\nhttp://api.sharecode.ga/api/version 测试网络`)
-        }
-      } finally {
-        resolve()
-      }
-    })
-  })
-}
-
-// prettier-ignore
 function Env(t, e) {
   "undefined" != typeof process && JSON.stringify(process.env).indexOf("GITHUB") > -1 && process.exit(0);
 
